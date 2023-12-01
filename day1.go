@@ -2,12 +2,11 @@ package main
 
 import (
 	"bufio"
-	"errors"
 	"fmt"
 	"log"
 	"os"
 	"strconv"
-	"unicode"
+	"strings"
 )
 
 func check(e error) {
@@ -29,9 +28,9 @@ func main() {
 		// read line by line
 		line := scanner.Text()
 
-		firstNum, err := FirstDigit(line)
+		firstNum := FirstDigit(line)
 		check(err)
-		lastNum, err := LastDigit(line)
+		lastNum := LastDigit(line)
 		check(err)
 		var lineNumStr string = string(firstNum) + string(lastNum)
 		lineNum, err := strconv.Atoi(lineNumStr)
@@ -47,23 +46,35 @@ func main() {
 	fmt.Println(sum(numbers))
 
 }
-func FirstDigit(s string) (rune, error) {
-	for _, r := range s {
-		if unicode.IsDigit(r) {
-			return r, nil
+func FirstDigit(s string) string {
+	validDigits := map[string]string{"1": "1", "2": "2", "3": "3", "4": "4", "5": "5", "6": "6", "7": "7", "8": "8", "9": "9", "one": "1", "two": "2", "three": "3", "four": "4", "five": "5", "six": "6", "seven": "7", "eight": "8", "nine": "9"}
+
+	lowestIndex := 9999999
+	valueWithLowestIndex := ""
+	for key, value := range validDigits {
+		index := strings.Index(s, key)
+		if index > -1 && index < lowestIndex {
+			lowestIndex = index
+			valueWithLowestIndex = value
 		}
 	}
-	return 0, errors.New("no number!")
+
+	return valueWithLowestIndex
 }
-func LastDigit(s string) (rune, error) {
-	runes := []rune(s)
-	for i := len(runes) - 1; i >= 0; i-- {
-		r := runes[i]
-		if unicode.IsDigit(r) {
-			return r, nil
+func LastDigit(s string) string {
+	validDigits := map[string]string{"1": "1", "2": "2", "3": "3", "4": "4", "5": "5", "6": "6", "7": "7", "8": "8", "9": "9", "one": "1", "two": "2", "three": "3", "four": "4", "five": "5", "six": "6", "seven": "7", "eight": "8", "nine": "9"}
+
+	highest := -1
+	bestValue := ""
+	for key, value := range validDigits {
+		index := strings.LastIndex(s, key)
+		if index > highest {
+			highest = index
+			bestValue = value
 		}
 	}
-	return 0, errors.New("no number!")
+
+	return bestValue
 }
 
 func sum(numbers []int) int {
