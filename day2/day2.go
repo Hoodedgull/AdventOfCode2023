@@ -23,21 +23,23 @@ func main() {
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
-	numbers := []int{}
+	powers := []int{}
 	for scanner.Scan() {
 		// read line by line
 		line := scanner.Text()
 
 		split := strings.Split(line, ":")
-		header := split[0]
-		gameid, _ := strconv.Atoi(strings.Split(header, " ")[1])
+		// header := split[0]
+		// gameid, _ := strconv.Atoi(strings.Split(header, " ")[1])
 
 		data := split[1]
 		draws := strings.Split(data, ";")
 
 		r, _ := regexp.Compile("(\\d+) (red|blue|green)")
 
-		possible := true
+		maxRed := 0
+		maxBlue := 0
+		maxGreen := 0
 		for _, draw := range draws {
 			colors := strings.Split(draw, ",")
 			for _, color := range colors {
@@ -45,22 +47,20 @@ func main() {
 				num := matches[1]
 				numnum, _ := strconv.Atoi(num)
 				col := matches[2]
-				if col == "red" && numnum > 12 {
-					possible = false
+				if col == "red" && numnum > maxRed {
+					maxRed = numnum
 				}
-				if col == "blue" && numnum > 14 {
-					possible = false
+				if col == "blue" && numnum > maxBlue {
+					maxBlue = numnum
 				}
-				if col == "green" && numnum > 13 {
-					possible = false
+				if col == "green" && numnum > maxGreen {
+					maxGreen = numnum
 				}
 			}
 
 		}
 
-		if possible {
-			numbers = append(numbers, gameid)
-		}
+		powers = append(powers, maxRed*maxBlue*maxGreen)
 
 	}
 
@@ -68,8 +68,8 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Println(numbers)
-	fmt.Println(sum(numbers))
+	fmt.Println(powers)
+	fmt.Println(sum(powers))
 
 }
 
