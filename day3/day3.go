@@ -22,7 +22,7 @@ func main() {
 	defer file.Close()
 
 	r, _ := regexp.Compile("\\d+")
-	r2, _ := regexp.Compile("[^\\d\\.]")
+	r2, _ := regexp.Compile("\\*")
 
 	scanner := bufio.NewScanner(file)
 	numbers := []int{}
@@ -32,43 +32,53 @@ func main() {
 		// read line by line
 		nextline := scanner.Text()
 
-		matcheIndices := r.FindAllStringSubmatchIndex(currentline, -1)
-		symbolIndices := r2.FindAllStringSubmatchIndex(prevline, -1)
-		symbolIndices2 := r2.FindAllStringSubmatchIndex(currentline, -1)
-		symbolIndices3 := r2.FindAllStringSubmatchIndex(nextline, -1)
+		gearIndices := r2.FindAllStringSubmatchIndex(currentline, -1)
+		numberIndices := r.FindAllStringSubmatchIndex(prevline, -1)
+		numberIndices2 := r.FindAllStringSubmatchIndex(currentline, -1)
+		numberIndices3 := r.FindAllStringSubmatchIndex(nextline, -1)
 
-		for _, match := range matcheIndices {
+		for _, match := range gearIndices {
 			startIdx := match[0]
 			endIdx := match[1]
 
-			prevIdx := startIdx - 1
-			if prevIdx < 0 {
-				prevIdx = 0
-			}
-			nextIdx := endIdx + 1
-			if nextIdx > len(currentline) {
-				nextIdx = len(currentline)
-			}
-			isPartNum := false
-			if includes(symbolIndices, func(symbol []int) bool {
-				return symbol[0] >= prevIdx && symbol[0] < nextIdx
-			}) {
-				isPartNum = true
-			}
-			if includes(symbolIndices2, func(symbol []int) bool {
-				return symbol[0] >= prevIdx && symbol[0] < nextIdx
-			}) {
-				isPartNum = true
-			}
-			if includes(symbolIndices3, func(symbol []int) bool {
-				return symbol[0] >= prevIdx && symbol[0] < nextIdx
-			}) {
-				isPartNum = true
+			// prevIdx := startIdx - 1
+			// if prevIdx < 0 {
+			// 	prevIdx = 0
+			// }
+			// nextIdx := endIdx + 1
+			// if nextIdx > len(currentline) {
+			// 	nextIdx = len(currentline)
+			// }
+
+			mathcingFunc := func(numidx []int) bool {
+				return (numidx[1] == startIdx) ||
+					(numidx[0] == endIdx) ||
+					(numidx[0] <= startIdx && numidx[1] >= startIdx)
 			}
 
-			if isPartNum {
-				matchedNumber, _ := strconv.Atoi(currentline[startIdx:endIdx])
-				numbers = append(numbers, matchedNumber)
+			indexToValueFuncFunc := func(line string) func(indexes []int) int {
+				return func(indexes []int) int {
+					lol, _ := strconv.Atoi(line[indexes[0]:indexes[1]])
+					return lol
+				}
+			}
+			indexesToValuePrev := indexToValueFuncFunc(prevline)
+			indexesToValueCurr := indexToValueFuncFunc(currentline)
+			indexesToValueNext := indexToValueFuncFunc(nextline)
+
+			numberOfNumbers := []int{}
+			numberOfNumbers = append(numberOfNumbers, Map(where(numberIndices, mathcingFunc), indexesToValuePrev)...)
+
+			numberOfNumbers = append(numberOfNumbers, Map(where(numberIndices2, mathcingFunc), indexesToValueCurr)...)
+			numberOfNumbers = append(numberOfNumbers, Map(where(numberIndices3, mathcingFunc), indexesToValueNext)...)
+
+			if len(numberOfNumbers) > 2 {
+				fmt.Println("wtf")
+			}
+			if len(numberOfNumbers) == 2 {
+				power := numberOfNumbers[0] * numberOfNumbers[1]
+				numbers = append(numbers, power)
+				fmt.Println(numberOfNumbers)
 			}
 
 		}
@@ -94,6 +104,25 @@ func includes[T any](values []T, selector func(T) bool) bool {
 		}
 	}
 	return false
+
+}
+
+func Map[T any, V any](vs []T, f func(T) V) []V {
+	vsm := make([]V, len(vs))
+	for i, v := range vs {
+		vsm[i] = f(v)
+	}
+	return vsm
+}
+
+func where[T any](values []T, selector func(T) bool) []T {
+	result := []T{}
+	for _, item := range values {
+		if selector(item) {
+			result = append(result, item)
+		}
+	}
+	return result
 
 }
 
