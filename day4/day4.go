@@ -23,26 +23,28 @@ func main() {
 
 	scanner := bufio.NewScanner(file)
 	numbers := []int{}
+	cardCopies := map[int]int{}
 
 	for scanner.Scan() {
 		// read line by line
 		line := scanner.Text()
-		data := strings.Split(line, ": ")[1]
+		split := strings.Split(line, ": ")
+		cardId, _ := strconv.Atoi(strings.TrimSpace(strings.Split(split[0], "Card")[1]))
+		data := split[1]
 		winningNums := Map(where(strings.Split(strings.Split(data, "|")[0], " "), instAllWhiteSpace), atoi)
 		haveNums := Map(where(strings.Split(strings.Split(data, "|")[1], " "), instAllWhiteSpace), atoi)
 
-		cardValue := 0
-		for _, num := range haveNums {
-			if includes(winningNums, func(i int) bool { return i == num }) {
-				if cardValue == 0 {
-					cardValue = 1
-				} else {
-					cardValue = cardValue * 2
-				}
-			}
-		}
+		numOfCards := cardCopies[cardId]
+		numOfCards = numOfCards + 1 // Add original to number of copies
+		numbers = append(numbers, numOfCards)
 
-		numbers = append(numbers, cardValue)
+		// Make card copies for winning numbers
+		winningNumsWeHave := where(haveNums, func(num int) bool { return includes(winningNums, func(i int) bool { return i == num }) })
+
+		for i := 1; i <= len(winningNumsWeHave); i++ {
+			wonCardId := cardId + i
+			cardCopies[wonCardId] = cardCopies[wonCardId] + numOfCards
+		}
 
 	}
 
