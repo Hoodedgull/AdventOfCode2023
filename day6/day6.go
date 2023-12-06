@@ -32,10 +32,10 @@ func main() {
 		split := strings.Split(line, ": ")
 		data := split[1]
 		if isFirst {
-			times = Map(where(strings.Split(data, " "), instAllWhiteSpace), atoi)
+			times = Map([]string{strings.Join(where(strings.Split(data, " "), instAllWhiteSpace), "")}, atoi)
 			isFirst = false
 		} else {
-			dists = Map(where(strings.Split(data, " "), instAllWhiteSpace), atoi)
+			dists = Map([]string{strings.Join(where(strings.Split(data, " "), instAllWhiteSpace), "")}, atoi)
 
 		}
 	}
