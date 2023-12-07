@@ -100,7 +100,7 @@ func cardValue(card string) int {
 	case "Q":
 		return 12
 	case "J":
-		return 11
+		return 1
 	case "T":
 		return 10
 	default:
@@ -119,8 +119,12 @@ func labelHand(hand string) int {
 	highestNumberOfSameCards := 0
 	highestChar := ""
 	prevChar := ""
+	numJokers := 0
 	for i := 0; i < len(chars); i++ {
-		if chars[i] == prevChar {
+		if chars[i] == "J" {
+			numJokers++
+		}
+		if chars[i] == prevChar && chars[i] != "J" {
 			numberOfSameCards++
 		} else {
 			numberOfSameCards = 1
@@ -133,6 +137,12 @@ func labelHand(hand string) int {
 			secondMostSameCards = numberOfSameCards
 		}
 		prevChar = chars[i]
+	}
+	if numJokers == 5 {
+		highestNumberOfSameCards = 5
+	} else {
+
+		highestNumberOfSameCards += numJokers
 	}
 
 	if highestNumberOfSameCards == 5 {
