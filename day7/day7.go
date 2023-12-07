@@ -32,7 +32,7 @@ type labelledHand struct {
 }
 
 func main() {
-	file, err := os.Open("./sample-day-07.txt")
+	file, err := os.Open("./input-day-07.txt")
 	check(err)
 
 	defer file.Close()
@@ -73,7 +73,16 @@ func main() {
 		return 0
 
 	})
-	fmt.Println("sorted hands", hands)
+	fmt.Println("sorted hands")
+
+	totalWinnings := 0
+	for i, hand := range hands {
+		rank := i + 1
+		winnings := rank * hand.bid
+		totalWinnings += winnings
+	}
+
+	fmt.Println(totalWinnings)
 
 	if err := scanner.Err(); err != nil {
 		log.Fatal(err)
