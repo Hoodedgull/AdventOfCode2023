@@ -24,6 +24,7 @@ func main() {
 	scanner := bufio.NewScanner(file)
 	nodeMap := map[string][]string{}
 	instructions := []string{}
+	startingNodes := []string{}
 
 	index := 0
 
@@ -40,7 +41,9 @@ func main() {
 			data := split[1]
 			children := strings.Split(strings.Replace(strings.Replace(data, "(", "", -1), ")", "", -1), ", ")
 			nodeMap[node] = children
-
+			if strings.HasSuffix(node, "A") {
+				startingNodes = append(startingNodes, node)
+			}
 		}
 		index++
 
@@ -52,18 +55,48 @@ func main() {
 
 	fmt.Println("made map")
 
-	node := "AAA"
+	nodes := startingNodes
+	lastTimeMap := map[int]int{}
 	steps := 0
 	index = 0
-	for node != "ZZZ" {
+	done := false
+	for !done {
 		steps++
-		nextNodes := nodeMap[node]
-		instruction := instructions[index]
-		if instruction == "L" {
-			node = nextNodes[0]
-		} else {
-			node = nextNodes[1]
+		nextNodes := []string{}
+		for _, n := range nodes {
+
+			children := nodeMap[n]
+			instruction := instructions[index]
+			if instruction == "L" {
+				nextNodes = append(nextNodes, children[0])
+			} else {
+				nextNodes = append(nextNodes, children[1])
+			}
 		}
+		nodes = nextNodes
+		stepsSinceLastTime := []int{}
+		anyHasZ := false
+		for i, n := range nodes {
+
+			if strings.HasSuffix(n, "Z") {
+				lastTime := lastTimeMap[i]
+				stepsSinceLastTime = append(stepsSinceLastTime, steps-lastTime)
+				lastTimeMap[i] = steps
+				anyHasZ = true
+			} else {
+
+				stepsSinceLastTime = append(stepsSinceLastTime, -1)
+			}
+		}
+
+		if anyHasZ {
+
+			fmt.Println(stepsSinceLastTime)
+		}
+		if every(nodes, func(n string) bool { return strings.HasSuffix(n, "Z") }) {
+			done = true
+		}
+
 		index++
 		if index >= len(instructions) {
 			index = 0
@@ -108,6 +141,18 @@ func where[T any](values []T, selector func(T) bool) []T {
 		}
 	}
 	return result
+
+}
+
+func every[T any](values []T, selector func(T) bool) bool {
+
+	return len(values) == len(where(values, selector))
+
+}
+
+func some[T any](values []T, selector func(T) bool) bool {
+
+	return len(where(values, selector)) > 0
 
 }
 
