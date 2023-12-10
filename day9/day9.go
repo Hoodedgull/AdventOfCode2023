@@ -37,14 +37,14 @@ func main() {
 		}
 		fmt.Println("made diff")
 
-		diffLines[len(diffLines)-1] = append(diffLines[len(diffLines)-1], 0)
+		diffLines[len(diffLines)-1] = prepend(diffLines[len(diffLines)-1], 0)
 		for i := len(diffLines) - 2; i >= 0; i-- {
-			newValue := diffLines[i][len(diffLines[i])-1] + diffLines[i+1][len(diffLines[i+1])-1]
-			diffLines[i] = append(diffLines[i], newValue)
+			newValue := diffLines[i][0] - diffLines[i+1][0]
+			diffLines[i] = prepend(diffLines[i], newValue)
 		}
 
 		fmt.Println("extrapolated")
-		extrapolatedValues = append(extrapolatedValues, diffLines[0][len(diffLines[0])-1])
+		extrapolatedValues = append(extrapolatedValues, diffLines[0][0])
 
 	}
 
@@ -70,6 +70,9 @@ func atoi(s string) int {
 	return lol
 }
 
+func prepend[T any](data []T, item T) []T {
+	return append([]T{item}, data...)
+}
 func instAllWhiteSpace(x string) bool { return len(strings.TrimSpace(x)) > 0 }
 
 func includes[T any](values []T, selector func(T) bool) bool {
