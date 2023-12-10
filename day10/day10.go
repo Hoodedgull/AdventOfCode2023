@@ -15,6 +15,11 @@ func check(e error) {
 	}
 }
 
+type section struct {
+	dirs     map[string]bool
+	isInLoop string
+}
+
 func main() {
 	file, err := os.Open("./input-day-10.txt")
 	check(err)
@@ -23,17 +28,17 @@ func main() {
 
 	scanner := bufio.NewScanner(file)
 	startCoordinates := [2]int{0, 0}
-	pipeMap := [][]map[string]bool{}
+	pipeMap := [][]section{}
 
 	y := 0
 	for scanner.Scan() {
 		// read line by line
 		line := scanner.Text()
 
-		lineSections := []map[string]bool{}
+		lineSections := []section{}
 
 		for x, v := range strings.Split(line, "") {
-			sect := map[string]bool{
+			dirs := map[string]bool{
 				"n": false,
 				"s": false,
 				"e": false,
@@ -43,28 +48,32 @@ func main() {
 				startCoordinates = [2]int{x, y}
 			}
 			if v == "|" {
-				sect["n"] = true
-				sect["s"] = true
+				dirs["n"] = true
+				dirs["s"] = true
 			}
 			if v == "-" {
-				sect["e"] = true
-				sect["w"] = true
+				dirs["e"] = true
+				dirs["w"] = true
 			}
 			if v == "J" {
-				sect["n"] = true
-				sect["w"] = true
+				dirs["n"] = true
+				dirs["w"] = true
 			}
 			if v == "7" {
-				sect["w"] = true
-				sect["s"] = true
+				dirs["w"] = true
+				dirs["s"] = true
 			}
 			if v == "F" {
-				sect["e"] = true
-				sect["s"] = true
+				dirs["e"] = true
+				dirs["s"] = true
 			}
 			if v == "L" {
-				sect["n"] = true
-				sect["e"] = true
+				dirs["n"] = true
+				dirs["e"] = true
+			}
+			sect := section{
+				dirs:     dirs,
+				isInLoop: "?",
 			}
 			lineSections = append(lineSections, sect)
 		}
@@ -75,53 +84,92 @@ func main() {
 	}
 
 	fmt.Println("made map")
+	fmt.Println(startCoordinates)
 
 	if err := scanner.Err(); err != nil {
 		log.Fatal(err)
 	}
 
 	startSect, dir1, dir2 := findStartConnections(pipeMap, startCoordinates)
-	pipeMap[startCoordinates[0]][startCoordinates[1]] = startSect
+	pipeMap[startCoordinates[1]][startCoordinates[0]] = startSect
 
 	fmt.Println("start")
-	fmt.Println(pipeMap[startCoordinates[0]][startCoordinates[1]])
+	fmt.Println(pipeMap[startCoordinates[1]][startCoordinates[0]])
 
 	coord1, sect1, from1 := goDirection(dir1, pipeMap, startCoordinates)
 	coord2, sect2, from2 := goDirection(dir2, pipeMap, startCoordinates)
+	pipeMap[coord1[1]][coord1[0]].isInLoop = "L"
+	pipeMap[coord2[1]][coord2[0]].isInLoop = "L"
 	dist := 1
 	for coord1 != coord2 {
 		coord1, sect1, from1 = goDirection(getNextDir(sect1, from1), pipeMap, coord1)
 		coord2, sect2, from2 = goDirection(getNextDir(sect2, from2), pipeMap, coord2)
+		pipeMap[coord1[1]][coord1[0]].isInLoop = "L"
+		pipeMap[coord2[1]][coord2[0]].isInLoop = "L"
 		dist++
 	}
 
 	fmt.Println("dist")
 	fmt.Println(dist)
 
+	numberInLoop := 0
+	for y, line := range pipeMap {
+		areWeInTheLoop := false
+		hasNorthConnect := false
+		hasSouthConnect := false
+		for x, sect := range line {
+			if sect.isInLoop == "L" {
+				if sect.dirs["n"] {
+
+					hasNorthConnect = !hasNorthConnect
+				}
+				if sect.dirs["s"] {
+
+					hasSouthConnect = !hasSouthConnect
+				}
+
+				if hasNorthConnect && hasSouthConnect {
+
+					areWeInTheLoop = !areWeInTheLoop
+					hasNorthConnect = false
+					hasSouthConnect = false
+				}
+			} else {
+				if areWeInTheLoop {
+					numberInLoop++
+					fmt.Println(x, ":", y)
+				}
+			}
+		}
+	}
+
+	fmt.Println("loop")
+	fmt.Println(numberInLoop)
+
 }
 
-func getNextDir(section map[string]bool, cameFrom string) string {
-	if cameFrom != "n" && section["n"] {
+func getNextDir(section section, cameFrom string) string {
+	if cameFrom != "n" && section.dirs["n"] {
 		return "n"
 	}
-	if cameFrom != "e" && section["e"] {
+	if cameFrom != "e" && section.dirs["e"] {
 		return "e"
 	}
-	if cameFrom != "w" && section["w"] {
+	if cameFrom != "w" && section.dirs["w"] {
 		return "w"
 	}
-	if cameFrom != "s" && section["s"] {
+	if cameFrom != "s" && section.dirs["s"] {
 		return "s"
 	}
 	return ""
 }
 
-func goDirection(dir string, pipeMap [][]map[string]bool, coordinates [2]int) (newCoords [2]int, section map[string]bool, cameFrom string) {
+func goDirection(dir string, pipeMap [][]section, coordinates [2]int) (newCoords [2]int, sect section, cameFrom string) {
 
 	if dir == "w" && coordinates[0] > 0 {
 		return [2]int{coordinates[0] - 1, coordinates[1]}, pipeMap[coordinates[1]][coordinates[0]-1], "e"
 	}
-	if dir == "e" && coordinates[0] < len(pipeMap)-1 {
+	if dir == "e" && coordinates[0] < len(pipeMap[coordinates[1]])-1 {
 		return [2]int{coordinates[0] + 1, coordinates[1]}, pipeMap[coordinates[1]][coordinates[0]+1], "w"
 	}
 
@@ -129,25 +177,25 @@ func goDirection(dir string, pipeMap [][]map[string]bool, coordinates [2]int) (n
 		return [2]int{coordinates[0], coordinates[1] - 1}, pipeMap[coordinates[1]-1][coordinates[0]], "s"
 	}
 
-	if dir == "s" && coordinates[1] < len(pipeMap[coordinates[0]])-1 {
+	if dir == "s" && coordinates[1] < len(pipeMap)-1 {
 		return [2]int{coordinates[0], coordinates[1] + 1}, pipeMap[coordinates[1]+1][coordinates[0]], "n"
 	}
 
-	return [2]int{0, 0}, map[string]bool{}, ""
+	return [2]int{0, 0}, section{}, ""
 }
 
-func findStartConnections(pipeMap [][]map[string]bool, startCoordinates [2]int) (map[string]bool, string, string) {
-	sect := map[string]bool{}
+func findStartConnections(pipeMap [][]section, startCoordinates [2]int) (section, string, string) {
+	dirs := map[string]bool{}
 	dir1 := ""
 	dir2 := ""
 	_, leftNeighbor, _ := goDirection("w", pipeMap, startCoordinates)
-	if leftNeighbor["e"] {
-		sect["w"] = true
+	if leftNeighbor.dirs["e"] {
+		dirs["w"] = true
 		dir1 = "w"
 	}
 	_, rightNeighbor, _ := goDirection("e", pipeMap, startCoordinates)
-	if rightNeighbor["w"] {
-		sect["e"] = true
+	if rightNeighbor.dirs["w"] {
+		dirs["e"] = true
 		if dir1 == "" {
 			dir1 = "e"
 		} else {
@@ -156,8 +204,8 @@ func findStartConnections(pipeMap [][]map[string]bool, startCoordinates [2]int) 
 	}
 
 	_, topNeightbor, _ := goDirection("n", pipeMap, startCoordinates)
-	if topNeightbor["s"] {
-		sect["n"] = true
+	if topNeightbor.dirs["s"] {
+		dirs["n"] = true
 		if dir1 == "" {
 			dir1 = "n"
 		} else {
@@ -166,13 +214,18 @@ func findStartConnections(pipeMap [][]map[string]bool, startCoordinates [2]int) 
 	}
 	_, downNeightbor, _ := goDirection("s", pipeMap, startCoordinates)
 
-	if downNeightbor["n"] {
-		sect["s"] = true
+	if downNeightbor.dirs["n"] {
+		dirs["s"] = true
 		if dir1 == "" {
 			dir1 = "s"
 		} else {
 			dir2 = "s"
 		}
+	}
+
+	sect := section{
+		dirs:     dirs,
+		isInLoop: "L",
 	}
 
 	return sect, dir1, dir2
