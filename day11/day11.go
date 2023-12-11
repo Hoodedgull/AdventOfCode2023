@@ -24,6 +24,7 @@ func main() {
 	scanner := bufio.NewScanner(file)
 	galaxyCoordinates := [][2]int{} // x, y
 	lengthOfSomeRow := 0
+	howMuchExtraSpaceForAnExpandedRow := 1000000 - 1
 
 	y := 0
 	for scanner.Scan() {
@@ -40,7 +41,7 @@ func main() {
 		}
 
 		if !rowHasGalaxies {
-			y++
+			y = y + howMuchExtraSpaceForAnExpandedRow
 		}
 
 		lengthOfSomeRow = len(line)
@@ -87,7 +88,7 @@ func main() {
 		expandedCols := where(colsWithOutGalaxies, func(n int) bool {
 			return n > item1[0] && n < item2[0] || n < item1[0] && n > item2[0]
 		})
-		expansion := len(expandedCols)
+		expansion := len(expandedCols) * howMuchExtraSpaceForAnExpandedRow
 
 		xDist := Abs(item1[0]-item2[0]) + expansion
 		yDist := Abs(item1[1] - item2[1]) // vertical expansion is accounted for when building coord list
