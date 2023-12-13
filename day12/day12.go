@@ -16,7 +16,7 @@ func check(e error) {
 }
 
 func main() {
-	file, err := os.Open("./input-day-12.txt")
+	file, err := os.Open("./sample-day-12.txt")
 	check(err)
 
 	defer file.Close()
@@ -30,9 +30,10 @@ func main() {
 
 		split := strings.Split(line, " ")
 		springs := split[0]
-		checksums := strings.Split(split[1], ",")
+		checksumsa := strings.Split(split[1], ",")
+		checksums := append(checksumsa, checksumsa...)
 
-		runes := []rune(springs)
+		runes := []rune(springs + "?" + springs)
 		combinations := [][]rune{runes}
 		lenth := len(runes)
 
