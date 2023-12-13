@@ -43,56 +43,54 @@ func main() {
 
 	total := 0
 	for _, pattern := range patterns {
-		horizontalMatchIndex := -1
-		// find horizontal mirroring
-		for i := 1; i < len(pattern); i++ {
 
-			line1 := i - 1
-			line2 := i
-			foundMisMatch := false
+		horizontalMatch, suspectedSmudge := getHorizontalMatch(pattern, -2)
+		verticalMatch, suspectedVSmudge := getVerticalMatch(pattern, -2)
 
-			for line1 >= 0 && line2 < len(pattern) {
-				if !isRowsSame(pattern, line1, line2) {
-					foundMisMatch = true
-					break
-				}
-				line1--
-				line2++
+		if suspectedSmudge != [2]int{-1, -1} {
+			fmt.Println("found smudge", suspectedSmudge)
+
+			// fix smudge
+			current := pattern[suspectedSmudge[0]][suspectedSmudge[1]]
+			if current == "#" {
+				pattern[suspectedSmudge[0]][suspectedSmudge[1]] = "."
+			} else if current == "." {
+				pattern[suspectedSmudge[0]][suspectedSmudge[1]] = "#"
+			} else {
+				fmt.Println("PANIC")
 			}
-			if !foundMisMatch {
-				// We found 2 lines that seemingly match!
-				// Verify that the other lines match as well
-				horizontalMatchIndex = i
-				total = total + horizontalMatchIndex*100
+			newhorizontalMatch, _ := getHorizontalMatch(pattern, horizontalMatch)
 
-			}
-		}
-
-		if horizontalMatchIndex == -1 {
-
-			// find vertical mirroring
-			for i := 1; i < len(pattern[0]); i++ {
-
-				line1 := i - 1
-				line2 := i
-				foundMisMatch := false
-
-				for line1 >= 0 && line2 < len(pattern[0]) {
-					if !isColsSame(pattern, line1, line2) {
-						foundMisMatch = true
-						break
-					}
-					line1--
-					line2++
-				}
-				if !foundMisMatch {
-					// We found 2 lines that seemingly match!
-					// TODO: Verify that the other lines match as well
-
-					total = total + i
-				}
+			if newhorizontalMatch != -1 {
+				total = total + newhorizontalMatch*100
+			} else {
+				fmt.Println("PANIC")
 			}
 		}
+
+		if suspectedVSmudge != [2]int{-1, -1} {
+			fmt.Println("found V smudge", suspectedVSmudge)
+
+			// fix smudge
+			current := pattern[suspectedVSmudge[0]][suspectedVSmudge[1]]
+			if current == "#" {
+				pattern[suspectedVSmudge[0]][suspectedVSmudge[1]] = "."
+			} else if current == "." {
+				pattern[suspectedVSmudge[0]][suspectedVSmudge[1]] = "#"
+			} else {
+				fmt.Println("PANIC")
+			}
+
+			newverticalMatch, _ := getVerticalMatch(pattern, verticalMatch)
+
+			if newverticalMatch != -1 {
+				total = total + newverticalMatch
+			} else {
+				fmt.Println("PANIC")
+			}
+
+		}
+
 	}
 
 	if err := scanner.Err(); err != nil {
@@ -104,32 +102,103 @@ func main() {
 
 }
 
-func isRowsSame(pattern [][]string, rowIndex1 int, rowIndex2 int) bool {
+func getVerticalMatch(pattern [][]string, oldMatch int) (int, [2]int) {
+	match := -1
+	smudge := [2]int{-1, -1}
+	// find vertical mirroring
+	for i := 1; i < len(pattern[0]); i++ {
+		line1 := i - 1
+		line2 := i
+		misMatches := [][2]int{}
+		hasBadMismatch := false
+		for line1 >= 0 && line2 < len(pattern[0]) {
+			errorRows := isColsSame(pattern, line1, line2)
+
+			if len(errorRows) > 1 {
+				hasBadMismatch = true
+				break
+			} else if len(errorRows) == 1 {
+				misMatches = append(misMatches, [2]int{
+					errorRows[0],
+					line1,
+				})
+			}
+			line1--
+			line2++
+		}
+		if !hasBadMismatch && len(misMatches) == 0 && i != oldMatch {
+			match = i
+		} else if !hasBadMismatch && len(misMatches) == 1 {
+			smudge = misMatches[0]
+		}
+
+	}
+	return match, smudge
+}
+
+func getHorizontalMatch(pattern [][]string, oldMatch int) (int, [2]int) {
+	match := -1
+	smudge := [2]int{-1, -1}
+	// find horizontal mirroring
+	for i := 1; i < len(pattern); i++ {
+
+		line1 := i - 1
+		line2 := i
+		misMatches := [][2]int{}
+		hasBadMismatch := false
+
+		for line1 >= 0 && line2 < len(pattern) {
+			errorCols := isRowsSame(pattern, line1, line2)
+			if len(errorCols) > 1 {
+				hasBadMismatch = true
+				break
+			} else if len(errorCols) == 1 {
+				misMatches = append(misMatches, [2]int{
+					line1,
+					errorCols[0],
+				})
+			}
+			line1--
+			line2++
+		}
+		if !hasBadMismatch && len(misMatches) == 0 && i != oldMatch {
+			match = i
+		} else if !hasBadMismatch && len(misMatches) == 1 {
+			smudge = misMatches[0]
+		}
+	}
+
+	return match, smudge
+}
+
+func isRowsSame(pattern [][]string, rowIndex1 int, rowIndex2 int) []int {
 	row1 := pattern[rowIndex1]
 	row2 := pattern[rowIndex2]
-	if len(row1) != len(row2) {
-		return false
-	}
+
+	misMatches := []int{}
 
 	for i := 0; i < len(row1); i++ {
 		item1 := row1[i]
 		item2 := row2[i]
 		if item1 != item2 {
-			return false
+			misMatches = append(misMatches, i)
 		}
 	}
-	return true
+	return misMatches
 }
 
-func isColsSame(pattern [][]string, colIndex1 int, colIndex2 int) bool {
+func isColsSame(pattern [][]string, colIndex1 int, colIndex2 int) []int {
+
+	misMatches := []int{}
+
 	for i := 0; i < len(pattern); i++ {
 		item1 := pattern[i][colIndex1]
 		item2 := pattern[i][colIndex2]
 		if item1 != item2 {
-			return false
+			misMatches = append(misMatches, i)
 		}
 	}
-	return true
+	return misMatches
 }
 
 func atoi(s string) int {
