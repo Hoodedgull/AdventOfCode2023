@@ -16,7 +16,7 @@ func check(e error) {
 }
 
 func main() {
-	file, err := os.Open("./input-day-14.txt")
+	file, err := os.Open("./sample-day-14.txt")
 	check(err)
 
 	defer file.Close()
@@ -33,9 +33,39 @@ func main() {
 
 	fmt.Println("Found rows x", len(grid))
 
-	grid = moveNorth(grid)
+	cycles := 1_000_000_000
+	consecutiveEqualLoads := 0
+	for i := 0; i < cycles; i++ {
+		prevLoad := calculateLoad(grid)
+		if i%1000000 == 0 {
+			fmt.Println("Got through ", i/1000000, "million cycles")
+		}
+		grid = moveNorth(grid)
+		grid = moveWest(grid)
+		grid = moveSouth(grid)
+		grid = moveEast(grid)
 
-	// Calculate load
+		load := calculateLoad(grid)
+		if prevLoad == load {
+			consecutiveEqualLoads++
+		} else {
+			consecutiveEqualLoads = 0
+		}
+		if consecutiveEqualLoads > 100000 {
+			fmt.Println("Found 100 loads in a row that were the same. Assuming we're done")
+			fmt.Println("Load is:", load)
+			break
+		}
+
+	}
+
+	if err := scanner.Err(); err != nil {
+		log.Fatal(err)
+	}
+
+}
+
+func calculateLoad(grid [][]string) int {
 	total := 0
 	for i, row := range grid {
 		distanceFromSouth := len(grid) - i
@@ -43,14 +73,7 @@ func main() {
 		rocksInRow := strings.Count(rowString, "O")
 		total += rocksInRow * distanceFromSouth
 	}
-
-	if err := scanner.Err(); err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Println("total")
-	fmt.Println(total)
-
+	return total
 }
 
 func moveNorth(grid [][]string) [][]string {
@@ -59,6 +82,26 @@ func moveNorth(grid [][]string) [][]string {
 	grid = moveEast(grid)
 	grid = rotateMatrix(grid)
 	grid = rotateMatrix(grid)
+	grid = rotateMatrix(grid)
+	return grid
+}
+
+func moveWest(grid [][]string) [][]string {
+
+	grid = rotateMatrix(grid)
+	grid = rotateMatrix(grid)
+	grid = moveEast(grid)
+	grid = rotateMatrix(grid)
+	grid = rotateMatrix(grid)
+	return grid
+}
+
+func moveSouth(grid [][]string) [][]string {
+
+	grid = rotateMatrix(grid)
+	grid = rotateMatrix(grid)
+	grid = rotateMatrix(grid)
+	grid = moveEast(grid)
 	grid = rotateMatrix(grid)
 	return grid
 }
