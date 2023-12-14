@@ -16,7 +16,7 @@ func check(e error) {
 }
 
 func main() {
-	file, err := os.Open("./sample-day-14.txt")
+	file, err := os.Open("./input-day-14.txt")
 	check(err)
 
 	defer file.Close()
@@ -34,9 +34,19 @@ func main() {
 	fmt.Println("Found rows x", len(grid))
 
 	cycles := 1_000_000_000
-	consecutiveEqualLoads := 0
-	for i := 0; i < cycles; i++ {
-		prevLoad := calculateLoad(grid)
+	history := map[string]int{}
+	cyclePattern := -1
+	for i := 0; i < cycles; {
+
+		diff := cycles - i
+		if cyclePattern != -1 && diff > cyclePattern {
+			numberOfCyclePatternsToGo := diff / cyclePattern
+			i += cyclePattern * numberOfCyclePatternsToGo
+			continue
+		} else {
+			i++
+		}
+
 		if i%1000000 == 0 {
 			fmt.Println("Got through ", i/1000000, "million cycles")
 		}
@@ -45,19 +55,27 @@ func main() {
 		grid = moveSouth(grid)
 		grid = moveEast(grid)
 
-		load := calculateLoad(grid)
-		if prevLoad == load {
-			consecutiveEqualLoads++
-		} else {
-			consecutiveEqualLoads = 0
+		historyRows := Map(grid, func(row []string) string {
+			return strings.Join(row, "")
+		})
+		entry := strings.Join(historyRows, "\n")
+		existingEntryIndex, ok := history[entry]
+
+		if ok {
+			fmt.Println("Found one we had before")
+			fmt.Println("current idx", i)
+			fmt.Println("last idx", existingEntryIndex)
+			fmt.Println("Lookslike this:")
+			fmt.Println(entry)
+			cyclePattern = i - existingEntryIndex
+			//break
 		}
-		if consecutiveEqualLoads > 100000 {
-			fmt.Println("Found 100 loads in a row that were the same. Assuming we're done")
-			fmt.Println("Load is:", load)
-			break
-		}
+		history[entry] = i
 
 	}
+
+	load := calculateLoad(grid)
+	fmt.Println(load)
 
 	if err := scanner.Err(); err != nil {
 		log.Fatal(err)
