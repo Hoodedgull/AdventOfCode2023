@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -22,7 +23,9 @@ func main() {
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
-	total := 0
+
+	taskCounter := 0
+	messages := make(chan int)
 
 	for scanner.Scan() {
 		// read line by line
@@ -32,39 +35,32 @@ func main() {
 		springs := split[0]
 		checksumsa := strings.Split(split[1], ",")
 		checksums := append(checksumsa, checksumsa...)
+		checksums = append(checksums, checksumsa...)
+		checksums = append(checksums, checksumsa...)
+		checksums = append(checksums, checksumsa...)
 
-		runes := []rune(springs + "?" + springs)
-		combinations := [][]rune{runes}
+		// runes := []rune(springs)
+		// runes := []rune(springs + "?" + springs + "?" + springs + "?" + springs)
+		runes := []rune(springs + "?" + springs + "?" + springs + "?" + springs + "?" + springs)
 		lenth := len(runes)
+		intialCombination := []rune(strings.Repeat(".", lenth))
 
-		for i := 0; i < lenth; i++ {
-			newCombs := [][]rune{}
-			for _, comb := range combinations {
+		taskCounter++
+		go getNextCombinations(checksums[0], intialCombination, checksums[0+1:], runes, messages, 0)
 
-				newCombs = append(newCombs, getNextCombinations(i, comb)...)
-			}
-			combinations = newCombs
-		}
-
-		fmt.Println("made combs for " + line)
-		// fmt.Println(Map(combinations, func(slc []rune) string { return string(slc) }))
-
-		subtotal := 0
-		for _, comp := range combinations {
-
-			if isValidComp(comp, checksums) {
-				subtotal++
-			}
-		}
-
-		fmt.Println("Theres this amny valid arrangements for " + line)
-		fmt.Println(subtotal)
-
-		total = total + subtotal
+		fmt.Println("startedTask")
 	}
 
 	if err := scanner.Err(); err != nil {
 		log.Fatal(err)
+	}
+
+	total := 0
+	for i := 0; i < taskCounter; i++ {
+		sub := <-messages
+		fmt.Println("got sub", sub)
+
+		total += sub
 	}
 
 	fmt.Println("total")
@@ -72,35 +68,91 @@ func main() {
 
 }
 
-func isValidComp(comp []rune, checksums []string) bool {
+func getNextCombinations(c string, runes []rune, followingChecksums []string, original []rune, out chan<- int, recLvl int) int {
 
-	damagedSpringGroups := where(strings.Split(string(comp), "."), instAllWhiteSpace)
-	if len(damagedSpringGroups) != len(checksums) {
-		return false
+	check := atoi(c)
+	lengthOfAfter := sum(Map(followingChecksums, atoi)) + len(followingChecksums) - 1 // The lenghts of checksums, plus one separator for each of them
+	start := 0
+	lastIdx := lastIndex(runes, '#')
+	if lastIdx != -1 {
+		start = lastIdx + 2
 	}
 
-	for i, v := range checksums {
-		springGroup := damagedSpringGroups[i]
-		expectedLen := atoi(v)
-		if len(springGroup) != expectedLen {
-			return false
-		}
-	}
-	return true
-}
+	end := len(runes) - lengthOfAfter
 
-func getNextCombinations(i int, runes []rune) [][]rune {
-	if runes[i] == '?' {
+	innerTaskCounter := 0
+	in := make(chan int)
+	result := 0
+	for i := start; i < end-check; i++ {
 		runeCopy1 := make([]rune, len(runes))
 		copy(runeCopy1, runes)
-		runeCopy2 := make([]rune, len(runes))
-		copy(runeCopy2, runes)
-		runeCopy1[i] = '.'
-		runeCopy2[i] = '#'
-		return [][]rune{runeCopy1, runeCopy2}
+		for j := 0; j < check; j++ {
+			runeCopy1[i+j] = '#'
+		}
+
+		if !violates(runeCopy1, original, i+check) {
+			if len(followingChecksums) > 0 {
+				innerTaskCounter++
+				if recLvl < 3 {
+
+					go getNextCombinations(followingChecksums[0], runeCopy1, followingChecksums[0+1:], original, in, recLvl+1)
+				} else {
+					result += getNextCombinations(followingChecksums[0], runeCopy1, followingChecksums[0+1:], original, in, recLvl+1)
+				}
+			} else {
+				result += 1
+			}
+		}
 	}
 
-	return [][]rune{runes}
+	if recLvl < 3 {
+
+		for i := 0; i < innerTaskCounter; i++ {
+			subsub := <-in
+			result += subsub
+		}
+	}
+
+	fmt.Println("Done", recLvl)
+	if recLvl <= 3 {
+
+		out <- result
+		return 0
+	} else {
+		return result
+	}
+}
+
+func violates(newRunes []rune, originalRunes []rune, checkToIdx int) bool {
+	if len(newRunes) != len(originalRunes) || checkToIdx > len(newRunes) {
+		fmt.Println("PANIC")
+	}
+
+	for i := 0; i < checkToIdx; i++ {
+		if originalRunes[i] == '?' {
+			continue
+		}
+
+		if originalRunes[i] != newRunes[i] {
+			return true
+		}
+	}
+	return false
+}
+
+func lastIndex[T comparable](runes []T, item T) int {
+	runeCopy1 := make([]T, len(runes))
+	copy(runeCopy1, runes)
+	// reverse
+	for i, j := 0, len(runeCopy1)-1; i < j; i, j = i+1, j-1 {
+		runeCopy1[i], runeCopy1[j] = runeCopy1[j], runeCopy1[i]
+	}
+	index := slices.Index(runeCopy1, item)
+	if index == -1 {
+		return index
+	}
+	lastindex := len(runeCopy1) - 1 - index
+	return lastindex
 }
 
 func atoi(s string) int {
