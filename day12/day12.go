@@ -46,7 +46,7 @@ func main() {
 		intialCombination := []rune(strings.Repeat(".", lenth))
 
 		taskCounter++
-		go getNextCombinations(checksums[0], intialCombination, checksums[0+1:], runes, messages)
+		go getNextCombinations(checksums[0], intialCombination, checksums[0+1:], runes, messages, 0)
 
 		fmt.Println("startedTask")
 	}
@@ -68,7 +68,7 @@ func main() {
 
 }
 
-func getNextCombinations(c string, runes []rune, followingChecksums []string, original []rune, out chan<- int) {
+func getNextCombinations(c string, runes []rune, followingChecksums []string, original []rune, out chan<- int, recLvl int) int {
 
 	check := atoi(c)
 	lengthOfAfter := sum(Map(followingChecksums, atoi)) + len(followingChecksums) - 1 // The lenghts of checksums, plus one separator for each of them
@@ -93,19 +93,34 @@ func getNextCombinations(c string, runes []rune, followingChecksums []string, or
 		if !violates(runeCopy1, original, i+check) {
 			if len(followingChecksums) > 0 {
 				innerTaskCounter++
-				go getNextCombinations(followingChecksums[0], runeCopy1, followingChecksums[0+1:], original, in)
+				if recLvl < 3 {
+
+					go getNextCombinations(followingChecksums[0], runeCopy1, followingChecksums[0+1:], original, in, recLvl+1)
+				} else {
+					result += getNextCombinations(followingChecksums[0], runeCopy1, followingChecksums[0+1:], original, in, recLvl+1)
+				}
 			} else {
 				result += 1
 			}
 		}
 	}
 
-	for i := 0; i < innerTaskCounter; i++ {
-		subsub := <-in
-		result += subsub
+	if recLvl < 3 {
+
+		for i := 0; i < innerTaskCounter; i++ {
+			subsub := <-in
+			result += subsub
+		}
 	}
 
-	out <- result
+	fmt.Println("Done", recLvl)
+	if recLvl <= 3 {
+
+		out <- result
+		return 0
+	} else {
+		return result
+	}
 }
 
 func violates(newRunes []rune, originalRunes []rune, checkToIdx int) bool {
