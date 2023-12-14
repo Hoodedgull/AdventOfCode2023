@@ -17,7 +17,7 @@ func check(e error) {
 }
 
 func main() {
-	file, err := os.Open("./input-day-12.txt")
+	file, err := os.Open("./sample-day-12.txt")
 	check(err)
 
 	defer file.Close()
@@ -38,38 +38,17 @@ func main() {
 		checksums = append(checksums, checksumsa...)
 
 		// runes := []rune(springs)
+		// runes := []rune(springs + "?" + springs + "?" + springs + "?" + springs)
 		runes := []rune(springs + "?" + springs + "?" + springs + "?" + springs + "?" + springs)
 		lenth := len(runes)
 		intialCombination := []rune(strings.Repeat(".", lenth))
-		combinations := [][]rune{intialCombination}
 
-		// Instead of making all the combinations, try just making all valid combinations
-		for i, c := range checksums {
-			newCombs := [][]rune{}
-			for _, comb := range combinations {
-
-				newCombs = append(newCombs, getNextCombinations(c, comb, checksums[i+1:], runes)...)
-			}
-			combinations = newCombs
-		}
+		combinations := getNextCombinations(checksums[0], intialCombination, checksums[0+1:], runes)
 
 		fmt.Println("made combs for " + line)
-		fmt.Println(len(combinations))
+		fmt.Println(combinations)
 
-		// fmt.Println(Map(combinations, func(slc []rune) string { return string(slc) }))
-
-		subtotal := 0
-		for _, comp := range combinations {
-
-			if isValidComp(comp, checksums) {
-				subtotal++
-			}
-		}
-
-		fmt.Println("Theres this amny valid arrangements for " + line)
-		fmt.Println(subtotal)
-
-		total = total + subtotal
+		total = total + combinations
 	}
 
 	if err := scanner.Err(); err != nil {
@@ -81,24 +60,7 @@ func main() {
 
 }
 
-func isValidComp(comp []rune, checksums []string) bool {
-
-	damagedSpringGroups := where(strings.Split(string(comp), "."), instAllWhiteSpace)
-	if len(damagedSpringGroups) != len(checksums) {
-		return false
-	}
-
-	for i, v := range checksums {
-		springGroup := damagedSpringGroups[i]
-		expectedLen := atoi(v)
-		if len(springGroup) != expectedLen {
-			return false
-		}
-	}
-	return true
-}
-
-func getNextCombinations(c string, runes []rune, followingChecksums []string, original []rune) [][]rune {
+func getNextCombinations(c string, runes []rune, followingChecksums []string, original []rune) int {
 
 	check := atoi(c)
 	lengthOfAfter := sum(Map(followingChecksums, atoi)) + len(followingChecksums) - 1 // The lenghts of checksums, plus one separator for each of them
@@ -110,7 +72,7 @@ func getNextCombinations(c string, runes []rune, followingChecksums []string, or
 
 	end := len(runes) - lengthOfAfter
 
-	result := [][]rune{}
+	result := 0
 	for i := start; i < end-check; i++ {
 		runeCopy1 := make([]rune, len(runes))
 		copy(runeCopy1, runes)
@@ -119,7 +81,11 @@ func getNextCombinations(c string, runes []rune, followingChecksums []string, or
 		}
 
 		if !violates(runeCopy1, original, i+check) {
-			result = append(result, runeCopy1)
+			if len(followingChecksums) > 0 {
+				result += getNextCombinations(followingChecksums[0], runeCopy1, followingChecksums[0+1:], original)
+			} else {
+				result += 1
+			}
 		}
 	}
 
