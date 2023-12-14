@@ -23,7 +23,9 @@ func main() {
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
-	total := 0
+
+	taskCounter := 0
+	messages := make(chan int)
 
 	for scanner.Scan() {
 		// read line by line
@@ -43,16 +45,22 @@ func main() {
 		lenth := len(runes)
 		intialCombination := []rune(strings.Repeat(".", lenth))
 
-		combinations := getNextCombinations(checksums[0], intialCombination, checksums[0+1:], runes)
+		taskCounter++
+		go getNextCombinations(checksums[0], intialCombination, checksums[0+1:], runes, messages)
 
-		fmt.Println("made combs for " + line)
-		fmt.Println(combinations)
-
-		total = total + combinations
+		fmt.Println("startedTask")
 	}
 
 	if err := scanner.Err(); err != nil {
 		log.Fatal(err)
+	}
+
+	total := 0
+	for i := 0; i < taskCounter; i++ {
+		sub := <-messages
+		fmt.Println("got sub", sub)
+
+		total += sub
 	}
 
 	fmt.Println("total")
@@ -60,7 +68,7 @@ func main() {
 
 }
 
-func getNextCombinations(c string, runes []rune, followingChecksums []string, original []rune) int {
+func getNextCombinations(c string, runes []rune, followingChecksums []string, original []rune, out chan<- int) {
 
 	check := atoi(c)
 	lengthOfAfter := sum(Map(followingChecksums, atoi)) + len(followingChecksums) - 1 // The lenghts of checksums, plus one separator for each of them
@@ -72,6 +80,8 @@ func getNextCombinations(c string, runes []rune, followingChecksums []string, or
 
 	end := len(runes) - lengthOfAfter
 
+	innerTaskCounter := 0
+	in := make(chan int)
 	result := 0
 	for i := start; i < end-check; i++ {
 		runeCopy1 := make([]rune, len(runes))
@@ -82,14 +92,20 @@ func getNextCombinations(c string, runes []rune, followingChecksums []string, or
 
 		if !violates(runeCopy1, original, i+check) {
 			if len(followingChecksums) > 0 {
-				result += getNextCombinations(followingChecksums[0], runeCopy1, followingChecksums[0+1:], original)
+				innerTaskCounter++
+				go getNextCombinations(followingChecksums[0], runeCopy1, followingChecksums[0+1:], original, in)
 			} else {
 				result += 1
 			}
 		}
 	}
 
-	return result
+	for i := 0; i < innerTaskCounter; i++ {
+		subsub := <-in
+		result += subsub
+	}
+
+	out <- result
 }
 
 func violates(newRunes []rune, originalRunes []rune, checkToIdx int) bool {
