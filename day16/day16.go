@@ -30,16 +30,61 @@ func main() {
 	scanner := bufio.NewScanner(file)
 
 	grid := [][]string{}
-	energized := [][]string{}
+
 	for scanner.Scan() {
 		// read line by line
 		line := scanner.Text()
 		grid = append(grid, strings.Split(line, ""))
-		energized = append(energized, make([]string, len(line)))
+
 	}
 
-	beams := []Beam{Beam{x: -1, y: 0, dir: "e"}}
+	fmt.Println("Got to an exit?!")
 
+	biggest := 0
+	for i := 0; i < len(grid); i++ {
+		total := getEnergizedNumber(grid, Beam{x: -1, y: i, dir: "e"})
+		if total > biggest {
+			biggest = total
+		}
+	}
+	fmt.Println("Done witht the left side")
+	for i := 0; i < len(grid); i++ {
+		total := getEnergizedNumber(grid, Beam{x: len(grid[0]), y: i, dir: "w"})
+		if total > biggest {
+			biggest = total
+		}
+	}
+	fmt.Println("Done witht the right side")
+	for i := 0; i < len(grid[0]); i++ {
+		total := getEnergizedNumber(grid, Beam{x: i, y: -1, dir: "s"})
+		if total > biggest {
+			biggest = total
+		}
+	}
+	fmt.Println("Done witht the top side")
+	for i := 0; i < len(grid[0]); i++ {
+		total := getEnergizedNumber(grid, Beam{x: i, y: len(grid), dir: "n"})
+		if total > biggest {
+			biggest = total
+		}
+	}
+	fmt.Println("Done witht the down side")
+	fmt.Println(biggest)
+
+	if err := scanner.Err(); err != nil {
+		log.Fatal(err)
+	}
+
+}
+
+func getEnergizedNumber(grid [][]string, startingBeam Beam) int {
+
+	energized := [][]string{}
+	for _, row := range grid {
+		energized = append(energized, make([]string, len(row)))
+	}
+
+	beams := []Beam{startingBeam}
 	for len(beams) > 0 {
 		newBeams := []Beam{}
 		for _, beam := range beams {
@@ -122,17 +167,9 @@ func main() {
 		beams = newBeams
 	}
 
-	fmt.Println("Got to an exit?!")
-
-	total := sum(Map(energized, func(row []string) int {
+	return sum(Map(energized, func(row []string) int {
 		return len(where(row, instAllWhiteSpace))
 	}))
-	fmt.Println(total)
-
-	if err := scanner.Err(); err != nil {
-		log.Fatal(err)
-	}
-
 }
 
 func getNextPos(beam Beam) (int, int) {
