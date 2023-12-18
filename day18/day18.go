@@ -28,7 +28,7 @@ type section struct {
 }
 
 func main() {
-	file, err := os.Open("./input-day-18.txt")
+	file, err := os.Open("./sample-day-18.txt")
 	check(err)
 
 	defer file.Close()
@@ -45,7 +45,7 @@ func main() {
 		color := strings.Replace(split[2], "(#", "", -1)
 		color = strings.Replace(color, ")", "", -1)
 		len := parseHex(color[0:5])
-		//len := atoi(split[1])
+		// len = atoi(split[1]) // For testing part1
 		runes := []rune(color)
 		if runes[5] == '0' {
 			dir = "R"
@@ -59,7 +59,7 @@ func main() {
 		if runes[5] == '3' {
 			dir = "U"
 		}
-		//dir = split[0]
+		// dir = split[0] // For testing part 1
 		inst := instruction{color: color, dir: dir, len: len}
 		instructions = append(instructions, inst)
 
@@ -68,15 +68,18 @@ func main() {
 	pipeMap := map[int]map[int]section{}
 
 	x, y := 0, 0
+	numberOfTrenchTiles := 0
 
 	for _, in := range instructions {
-		for i := 0; i < in.len; i++ {
+		for i := 0; i < in.len; {
 			current := getSafe(pipeMap, x, y)
 			if in.dir == "R" {
 				current.dirs["e"] = true
 				current.isInLoop = "#"
 				pipeMap[y][x] = current
-				x = x + 1
+				x = x + in.len
+				i += in.len
+				numberOfTrenchTiles += in.len
 				next := getSafe(pipeMap, x, y)
 				next.dirs["w"] = true
 				next.isInLoop = "#"
@@ -87,7 +90,9 @@ func main() {
 				current.dirs["w"] = true
 				current.isInLoop = "#"
 				pipeMap[y][x] = current
-				x = x - 1
+				x = x - in.len
+				i += in.len
+				numberOfTrenchTiles += in.len
 				next := getSafe(pipeMap, x, y)
 				next.dirs["e"] = true
 				next.isInLoop = "#"
@@ -99,6 +104,8 @@ func main() {
 				current.isInLoop = "#"
 				pipeMap[y][x] = current
 				y = y - 1
+				i += 1
+				numberOfTrenchTiles += 1
 				next := getSafe(pipeMap, x, y)
 				next.dirs["s"] = true
 				next.isInLoop = "#"
@@ -110,6 +117,8 @@ func main() {
 				current.isInLoop = "#"
 				pipeMap[y][x] = current
 				y = y + 1
+				i += 1
+				numberOfTrenchTiles += 1
 				next := getSafe(pipeMap, x, y)
 				next.dirs["n"] = true
 				next.isInLoop = "#"
@@ -120,14 +129,6 @@ func main() {
 	}
 
 	fmt.Println("Filled Out Map")
-	numberOfTrenchTiles := 0
-	for _, value := range pipeMap {
-		for _, sec := range value {
-			if sec.isInLoop == "#" {
-				numberOfTrenchTiles++
-			}
-		}
-	}
 
 	fmt.Println(numberOfTrenchTiles)
 
