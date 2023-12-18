@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -41,118 +42,151 @@ func main() {
 		line := scanner.Text()
 		split := strings.Split(line, " ")
 		dir := split[0]
-		len := atoi(split[1])
 		color := strings.Replace(split[2], "(#", "", -1)
 		color = strings.Replace(color, ")", "", -1)
+		len := parseHex(color[0:5])
+		//len := atoi(split[1])
+		runes := []rune(color)
+		if runes[5] == '0' {
+			dir = "R"
+		}
+		if runes[5] == '1' {
+			dir = "D"
+		}
+		if runes[5] == '2' {
+			dir = "L"
+		}
+		if runes[5] == '3' {
+			dir = "U"
+		}
+		//dir = split[0]
 		inst := instruction{color: color, dir: dir, len: len}
 		instructions = append(instructions, inst)
 
 	}
 
-	// Create a map with _real_ safe margins
-	totalRight := sum(Map(where(instructions, func(in instruction) bool {
-		return in.dir == "R"
-	}), func(in instruction) int {
-		return in.len
-	}))
-	totaLeft := sum(Map(where(instructions, func(in instruction) bool {
-		return in.dir == "L"
-	}), func(in instruction) int {
-		return in.len
-	}))
-	totalUp := sum(Map(where(instructions, func(in instruction) bool {
-		return in.dir == "U"
-	}), func(in instruction) int {
-		return in.len
-	}))
-	totalDown := sum(Map(where(instructions, func(in instruction) bool {
-		return in.dir == "D"
-	}), func(in instruction) int {
-		return in.len
-	}))
+	pipeMap := map[int]map[int]section{}
 
-	pipeMap := [][]section{}
-	for i := 0; i < totalUp+totalDown+2; i++ {
-		row := make([]section, totaLeft+totalRight+2)
-		for j := 0; j < totaLeft+totalRight+2; j++ {
-			row[j] = section{dirs: map[string]bool{}}
-		}
-		pipeMap = append(pipeMap, row)
-	}
-
-	fmt.Println("Made empty map")
-
-	x, y := totaLeft, totalUp
+	x, y := 0, 0
 
 	for _, in := range instructions {
 		for i := 0; i < in.len; i++ {
+			current := getSafe(pipeMap, x, y)
 			if in.dir == "R" {
-				pipeMap[y][x].dirs["e"] = true
-				pipeMap[y][x].isInLoop = "#"
+				current.dirs["e"] = true
+				current.isInLoop = "#"
+				pipeMap[y][x] = current
 				x = x + 1
-				pipeMap[y][x].dirs["w"] = true
-				pipeMap[y][x].isInLoop = "#"
+				next := getSafe(pipeMap, x, y)
+				next.dirs["w"] = true
+				next.isInLoop = "#"
+				pipeMap[y][x] = next
 			}
 
 			if in.dir == "L" {
-				pipeMap[y][x].dirs["w"] = true
-				pipeMap[y][x].isInLoop = "#"
+				current.dirs["w"] = true
+				current.isInLoop = "#"
+				pipeMap[y][x] = current
 				x = x - 1
-				pipeMap[y][x].dirs["e"] = true
-				pipeMap[y][x].isInLoop = "#"
+				next := getSafe(pipeMap, x, y)
+				next.dirs["e"] = true
+				next.isInLoop = "#"
+				pipeMap[y][x] = next
 			}
 
 			if in.dir == "U" {
-				pipeMap[y][x].dirs["n"] = true
-				pipeMap[y][x].isInLoop = "#"
+				current.dirs["n"] = true
+				current.isInLoop = "#"
+				pipeMap[y][x] = current
 				y = y - 1
-				pipeMap[y][x].dirs["s"] = true
-				pipeMap[y][x].isInLoop = "#"
+				next := getSafe(pipeMap, x, y)
+				next.dirs["s"] = true
+				next.isInLoop = "#"
+				pipeMap[y][x] = next
 			}
 
 			if in.dir == "D" {
-				pipeMap[y][x].dirs["s"] = true
-				pipeMap[y][x].isInLoop = "#"
+				current.dirs["s"] = true
+				current.isInLoop = "#"
+				pipeMap[y][x] = current
 				y = y + 1
-				pipeMap[y][x].dirs["n"] = true
-				pipeMap[y][x].isInLoop = "#"
+				next := getSafe(pipeMap, x, y)
+				next.dirs["n"] = true
+				next.isInLoop = "#"
+				pipeMap[y][x] = next
 			}
 
 		}
 	}
 
 	fmt.Println("Filled Out Map")
-	visual := strings.Join(Map(pipeMap, func(row []section) string {
-		return strings.Join(Map(row, func(sec section) string {
+	numberOfTrenchTiles := 0
+	for _, value := range pipeMap {
+		for _, sec := range value {
 			if sec.isInLoop == "#" {
-				return "#"
-			} else {
-				return "."
+				numberOfTrenchTiles++
 			}
-		}), "")
-	}), "\n")
-	fmt.Println(visual)
+		}
+	}
 
-	numberOfTrenchTiles := strings.Count(visual, "#")
+	fmt.Println(numberOfTrenchTiles)
+
+	yValues := make([]int, 0)
+	for k, _ := range pipeMap {
+		yValues = append(yValues, k)
+	}
+	sort.Ints(yValues)
 
 	numberOfInteriorTiles := 0
-	for _, line := range pipeMap {
+	for _, y := range yValues {
+
+		xValues := make([]int, 0)
+		for k, _ := range pipeMap[y] {
+			xValues = append(xValues, k)
+		}
+		sort.Ints(xValues)
+
+		// if len(xValues) > 2 {
+		// 	fmt.Println("exiting!")
+		// }
 		areWeInTheLoop := false
 		hasNorthConnect := false
 		hasSouthConnect := false
-		for _, sect := range line {
+		xEntry := 0
+		xExit := 0
+		for _, x := range xValues {
+			sect := pipeMap[y][x]
+
 			if sect.isInLoop == "#" {
 				if sect.dirs["n"] {
-
+					if !hasNorthConnect && !hasSouthConnect {
+						xExit = x
+					}
+					if hasNorthConnect && areWeInTheLoop {
+						// we have been in a sideways trench, which is counted later, so we need to subtract it
+						numberOfInteriorTiles = numberOfInteriorTiles - ((x - xExit) + 1)
+					}
 					hasNorthConnect = !hasNorthConnect
 				}
 				if sect.dirs["s"] {
-
+					if !hasNorthConnect && !hasSouthConnect {
+						xExit = x
+					}
+					if hasSouthConnect && areWeInTheLoop {
+						// we have been in a sideways trench, which is counted later, so we need to subtract it
+						numberOfInteriorTiles = numberOfInteriorTiles - ((x - xExit) + 1)
+					}
 					hasSouthConnect = !hasSouthConnect
 				}
 
 				if hasNorthConnect && hasSouthConnect {
 
+					// if we are in the loop and breaking out, add all tiles since entry
+					if areWeInTheLoop {
+						numberOfInteriorTiles = numberOfInteriorTiles + (xExit - xEntry) - 1
+					} else {
+						xEntry = x
+					}
 					areWeInTheLoop = !areWeInTheLoop
 					hasNorthConnect = false
 					hasSouthConnect = false
@@ -175,6 +209,28 @@ func main() {
 		log.Fatal(err)
 	}
 
+}
+
+func getSafe(grid map[int]map[int]section, x int, y int) section {
+	row, ok := grid[y]
+	if !ok {
+		row = map[int]section{}
+		grid[y] = row
+	}
+	sect, ok2 := row[x]
+	if !ok2 {
+		sect = section{dirs: map[string]bool{}}
+		row[x] = sect
+	}
+	return sect
+}
+
+func parseHex(input string) int {
+	n, err := strconv.ParseInt(input, 16, 64)
+	if err != nil {
+		panic(err)
+	}
+	return int(n)
 }
 
 func atoi(s string) int {
